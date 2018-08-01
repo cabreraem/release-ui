@@ -1,6 +1,6 @@
 'use strict';
 
-var app = angular.module('ReleaseUI', ['ReleaseUI.controllers', 'ngRoute', 'ngResource', 'ngMaterial']);
+var app = angular.module('ReleaseUI', ['ReleaseUI.controllers', 'ReleaseUI.services', 'ngRoute', 'ngResource', 'ngMaterial']);
 
 
 app.config(function($routeProvider, $locationProvider) {
@@ -20,9 +20,9 @@ app.config(function($routeProvider, $locationProvider) {
     .otherwise({
       redirectTo: '/login'
     });
-}).run(function($rootScope, $location) {
+}).run(function($rootScope, $location, Auth) {
   $rootScope.$on("$routeChangeStart", function(event, next, current) {
-    if (localStorage.getItem('loggedIn') == null) {
+    if (false) {
       // no logged user, redirect to /login
       if ( next.templateUrl === "app/partials/login.html") {
       } else {

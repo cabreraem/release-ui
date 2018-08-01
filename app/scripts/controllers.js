@@ -9,11 +9,11 @@ var auth_team = 'release-ui';
 var app = angular.module('ReleaseUI.controllers', ['ngStorage', 'ReleaseUI.filters']);
 
 
-app.controller('MainController', ['$scope','$http','$location', '$sessionStorage',
-  function($scope, $http, $location, $sessionStorage) {
+app.controller('MainController', ['$scope','$http','$location', '$sessionStorage', 'Auth', 'ReleaseData',
+  function($scope, $http, $location, $sessionStorage, Auth, ReleaseData) {
 
     $scope.logout = function () {
-      localStorage.removeItem('loggedIn');
+      Auth.logout();
       $location.path('/login');
     };
 
@@ -257,18 +257,19 @@ app.controller('MainController', ['$scope','$http','$location', '$sessionStorage
 
     // Redirect to Details function onclick of table row
     $scope.redirectToDetails = function (input) {
+      ReleaseData.setRelease(input);
       var newRoute = '/' + input.release_id;
       $location.path(newRoute);
     };
 }]);
 
-app.controller('DetailsController', ['$scope', '$location', '$http', '$routeParams', '$sessionStorage',
-  function ($scope, $location, $http, $routeParams, $sessionStorage) {
+app.controller('DetailsController', ['$scope', '$location', '$http', 'Auth', 'ReleaseData',
+  function ($scope, $location, $http, Auth, ReleaseData) {
 
     $scope.user = localStorage.getItem('user');
 
     $scope.logout = function () {
-      localStorage.removeItem('loggedIn');
+      Auth.logout();
       $location.path('/login');
     };
 
@@ -277,23 +278,12 @@ app.controller('DetailsController', ['$scope', '$location', '$http', '$routePara
       $location.path('/dashboard');
     };
 
-    var release_name = $routeParams.release_id;
-
-    // Request release details
-    $http({
-         method: 'GET',
-         url: site + '/release?release=' + release_name,
-         cache: true
-     }).then(function successCallback(response) {
-         $scope.release = angular.fromJson(response.data);
-     }, function errorCallback(response) {
-         console.log(response);
-     });
+    $scope.release = ReleaseData.getRelease();
 
     // Request task details
     $http({
          method: 'GET',
-         url: site + '/tasks?release=' + release_name,
+         url: site + '/tasks?release=' + $scope.release.release_id,
          cache: true
      }).then(function successCallback(response) {
           $scope.tasks = transform(response.data);
@@ -306,76 +296,92 @@ app.controller('DetailsController', ['$scope', '$location', '$http', '$routePara
      };
 }]);
 
-app.controller('LoginController', ['$scope', '$location', '$http', '$sessionStorage',
-  function($scope, $location, $http){
-    var loggingIn;
+app.controller('LoginController', ['Auth', '$scope', '$location', '$http', '$sessionStorage',
+  function(Auth, $scope, $location, $http){
 
-    var provider = new firebase.auth.GithubAuthProvider();
-    provider.addScope('repo');
+    Auth.redirect();
 
-    if (localStorage.getItem('loggedIn')) {
+    if(Auth.isLoggedIn()){
       $scope.login_message = 'Go to Dashboard';
-    }
-    else if (localStorage.getItem('loggingIn')) {
-      $scope.login_message = 'Log In with GitHub';
-      localStorage.removeItem('loggingIn');
-      $scope.isLoading = true;
-      firebase.auth().getRedirectResult().then(function(result) {
-        var token = result.credential.accessToken;
-        console.log(result);
-        $http({
-            method: 'GET',
-            url: 'https://api.github.com/user/teams',
-            headers: {'Authorization': 'token ' + token}
-        }).then(function successCallback(response) {
-            var teams = response.data;
-            var auth = false;
-            for (var key in teams) {
-             if (teams.hasOwnProperty(key)){
-               var name = teams[key].name;
-               var org = teams[key].organization.login;
-
-               if (name == auth_team && org == auth_org){
-                 auth = true;
-                 console.log('loggedin');
-                 localStorage.setItem('loggedIn', true);
-                 localStorage.setItem('user', result.user.displayName);
-                 $location.path('/dashboard');
-               }
-             }
-           }
-           if(!auth){
-             alert("You are not authorized to view this page.");
-           }
-           $scope.isLoading = false;
-        }, function errorCallback(response) {
-          $scope.isLoading = false;
-          console.log(response);
-        });
-      }).catch(function(error) {
-        $scope.isLoading = false;
-        console.log(error);
-      });
-    }
-    else {
-      $scope.login_message = 'Log In with GitHub';
-      localStorage.removeItem('user');
-      firebase.auth().signOut().then(function() {
-        console.log('Sign out successful');
-      }).catch(function(error) {
-        console.log(error);
-      });
-    }
-
-    $scope.login = function () {
-      if (localStorage.getItem('loggedIn')){
+      $scope.login = function () {
         $location.path('/dashboard');
       }
-      else {
-        localStorage.setItem('loggingIn', true);
-        firebase.auth().signInWithRedirect(provider);
+    }
+    else {
+      $scope.login = function () {
+        Auth.login();
       }
-    };
+    }
+
+
+    // var loggingIn;
+    //
+    // var provider = new firebase.auth.GithubAuthProvider();
+    // provider.addScope('repo');
+    //
+    // if (localStorage.getItem('loggedIn')) {
+    //   $scope.login_message = 'Go to Dashboard';
+    // }
+    // else if (localStorage.getItem('loggingIn')) {
+    //   $scope.login_message = 'Log In with GitHub';
+    //   localStorage.removeItem('loggingIn');
+    //   $scope.isLoading = true;
+    //   firebase.auth().getRedirectResult().then(function(result) {
+    //     var token = result.credential.accessToken;
+    //     console.log(result);
+    //     $http({
+    //         method: 'GET',
+    //         url: 'https://api.github.com/user/teams',
+    //         headers: {'Authorization': 'token ' + token}
+    //     }).then(function successCallback(response) {
+    //         var teams = response.data;
+    //         var auth = false;
+    //         for (var key in teams) {
+    //          if (teams.hasOwnProperty(key)){
+    //            var name = teams[key].name;
+    //            var org = teams[key].organization.login;
+    //
+    //            if (name == auth_team && org == auth_org){
+    //              auth = true;
+    //              console.log('loggedin');
+    //              localStorage.setItem('loggedIn', true);
+    //              localStorage.setItem('user', result.user.displayName);
+    //              $location.path('/dashboard');
+    //            }
+    //          }
+    //        }
+    //        if(!auth){
+    //          alert("You are not authorized to view this page.");
+    //        }
+    //        $scope.isLoading = false;
+    //     }, function errorCallback(response) {
+    //       $scope.isLoading = false;
+    //       console.log(response);
+    //     });
+    //   }).catch(function(error) {
+    //     $scope.isLoading = false;
+    //     console.log(error);
+    //   });
+    // }
+    // else {
+    //   $scope.login_message = 'Log In with GitHub';
+    //   localStorage.removeItem('user');
+    //   firebase.auth().signOut().then(function() {
+    //     console.log('Sign out successful');
+    //   }).catch(function(error) {
+    //     console.log(error);
+    //   });
+    // }
+    //
+    // $scope.login = function () {
+    //   if (localStorage.getItem('loggedIn')){
+    //     $location.path('/dashboard');
+    //   }
+    //   else {
+    //     localStorage.setItem('loggingIn', true);
+    //     firebase.auth().signInWithRedirect(provider);
+    //   }
+    // };
 }]);
 
 var transform =
