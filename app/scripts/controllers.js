@@ -300,6 +300,7 @@ app.controller('LoginController', ['Auth', '$scope', '$location', '$http', '$ses
   function(Auth, $scope, $location, $http){
 
     Auth.redirect();
+    Auth.isLoggedIn();
 
     if(Auth.isLoggedIn()){
       $scope.login_message = 'Go to Dashboard';

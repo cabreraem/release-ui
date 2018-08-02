@@ -45,7 +45,7 @@ app.factory('Auth', ['$http', '$location', '$rootScope',
       });
     }
     function isLoggedIn() {
-      firebase.auth().onAuthStateChanged(function(user) {
+      return firebase.auth().onAuthStateChanged(function(user) {
        if (user) {
          console.log('Logged In');
          return true;
@@ -72,4 +72,4 @@ app.service('ReleaseData', function() {
     setRelease: setRelease,
     getRelease: getRelease
   };
-})
+});
