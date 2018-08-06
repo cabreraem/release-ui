@@ -32,22 +32,27 @@ app.config(function($routeProvider, $locationProvider) {
   $rootScope.$on("$routeChangeStart", function(event, next, current) {
     firebase.auth().onAuthStateChanged(function(user) {
       if (user) {
-        // logged user, redirect to /dashboard
+        // logged user, redirect to /dashboard when /login requested
         if (next.templateUrl === "app/partials/login.html") {
-          $location.path('dashboard');
+          event.preventDefault();
+          $location.path('/dashboard');
         }
-        Auth.isAuthenticated().then((result) => {
-          if ( next.templateUrl === "app/partials/create-release.html") {
-            $location.path("/dashboard");
-          }
-        });
+        //check if authenticated for /create-release
+        if (next.templateUrl === "app/partials/create-release.html") {
+          Auth.isAuthenticated.then((result) => {
+            if (result) {
+            }
+            else {
+              event.preventDefault();
+              $location.path('/dashboard');
+            }
+          })
+        }
       }
       else {
         // no logged user, redirect to /login
-        if ( next.templateUrl === "app/partials/login.html") {
-        } else {
-          $location.path("/login");
-        }
+        event.preventDefault();
+        $location.path("/login");
       }
     });
   });

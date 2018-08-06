@@ -11,9 +11,17 @@ var app = angular.module('ReleaseUI.controllers', ['ngStorage', 'ReleaseUI.filte
 app.controller('MainController', ['$scope','$http','$location', '$sessionStorage', '$interval', 'Auth', 'ReleaseData',
   function($scope, $http, $location, $sessionStorage, $interval, Auth, ReleaseData) {
 
+    // Authentication
+    $scope.auth = Auth.isAuthenticated();
+    $scope.user = Auth.getUser();
     $scope.logout = function () {
-      Auth.logout();
-      $location.path('/login');
+      firebase.auth().signOut().then(function() {
+        console.log('Sign out successful');
+        Auth.logout();
+        $location.path('/login');
+      }).catch(function(error) {
+        console.log(error);
+      });
     };
 
     // Set static variables
@@ -327,11 +335,6 @@ app.controller('FormController', ['$scope', '$location', '$http', '$compile',
     $scope.release = {};
     $scope.inputs = 1;
 
-    $scope.logout = function () {
-      localStorage.removeItem('loggedIn');
-      $location.path('/login');
-    };
-
     $scope.redirect = function () {
       $location.path('/dashboard');
     };
@@ -375,17 +378,9 @@ app.controller('FormController', ['$scope', '$location', '$http', '$compile',
 app.controller('DetailsController', ['$scope', '$location', '$http', 'Auth', 'ReleaseData',
   function ($scope, $location, $http, Auth, ReleaseData) {
 
-    $scope.auth = localStorage.getItem('auth');
-
     $scope.createRelease = function () {
       $location.path('/create-release');
     };
-
-    $scope.logout = function () {
-      Auth.logout();
-      $location.path('/login');
-    };
-
 
     // on click of nav bar returns user to main dashboard
     $scope.redirect = function () {
@@ -440,19 +435,25 @@ app.controller('LogsController', ['$scope', '$http', '$routeParams', '$sce',
 }]);
 
 app.controller('LoginController', ['$scope', '$location', '$rootScope', 'Auth',
-  function($scope, $location, $rootScope, Auth{
+  function($scope, $location, $rootScope, Auth){
     var provider = new firebase.auth.GithubAuthProvider();
     provider.addScope('repo');
 
     $scope.login = function() {
-      firebase.auth().signInWithPopup(provider).then(function(result) {
-        $rootScope.user = result.user.displayName;
-        Auth.login(result.credential.accessToken);
-        $location.path('/dashboard');
-      }).catch(function(error) {
-        console.log(error);
-      });
+      firebase.auth().signInWithRedirect(provider);
     };
+
+    firebase.auth().getRedirectResult().then(function(result) {
+      console.log('Logged In');
+      var token = result.credential.accessToken;
+      var user = result.user.displayName;
+      var credential = result.credential;
+      Auth.login(token, user, credential);
+      $location.path('/dashboard')
+    }).catch(function(error) {
+      console.log(error);
+    });
+
 }]);
 
 var transform =

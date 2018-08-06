@@ -11,29 +11,39 @@ app.factory('Auth', ['$http', '$location', '$rootScope',
   function($http, $location, $rootScope) {
     var provider = new firebase.auth.GithubAuthProvider();
     provider.addScope('repo');
-    var user;
     var token;
+    var user;
+    var credential;
 
     var service = {
        login: login,
+       getUser: getUser,
        logout: logout,
        login: login,
        isAuthenticated: isAuthenticated
     };
     return service;
 
-    function login(input) {
-      token = input;
+    function login(token, username, credential) {
+      token = token;
+      user = username;
+      credential = credential;
+    }
+
+    function isLoggedIn() {
+
+    }
+
+    function getUser() {
+      return user;
     }
 
     function logout() {
       user = null;
-      return firebase.auth().signOut().then(function() {
-        console.log('Sign out successful');
-      }).catch(function(error) {
-        console.log(error);
-      });
+      token = null;
+      credential = null;
     }
+
     function isAuthenticated() {
       return $http({
           method: 'GET',
