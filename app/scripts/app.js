@@ -22,22 +22,29 @@ app.config(function($routeProvider, $locationProvider) {
       controller: 'DetailsController'
     })
     .otherwise({
-      redirectTo: '/login'
+      redirectTo: '/dashboard'
     });
 }).run(function($rootScope, $location, Auth) {
   $rootScope.$on("$routeChangeStart", function(event, next, current) {
-    if (false) {
-      // no logged user, redirect to /login
-      if ( next.templateUrl === "app/partials/login.html") {
-      } else {
-        $location.path("/login");
+    firebase.auth().onAuthStateChanged(function(user) {
+      if (user) {
+        // logged user, redirect to /dashboard
+        if (next.templateUrl === "app/partials/login.html") {
+          $location.path('dashboard');
+        }
+        Auth.isAuthenticated().then((result) => {
+          if ( next.templateUrl === "app/partials/create-release.html") {
+            $location.path("/dashboard");
+          }
+        });
       }
-    }
-    if (localStorage.getItem('auth') == null) {
-      // no authenticated user, redirect to previous page or dashboard
-      if ( next.templateUrl === "app/partials/create-release.html") {
-        $location.path("/dashboard");
+      else {
+        // no logged user, redirect to /login
+        if ( next.templateUrl === "app/partials/login.html") {
+        } else {
+          $location.path("/login");
+        }
       }
-    }
+    });
   });
 });

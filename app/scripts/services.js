@@ -2,57 +2,59 @@
 
 /* Services */
 
+var auth_org = 'istio-releases';
+var auth_team = 'release-ui';
+
 var app = angular.module('ReleaseUI.services', []);
 
 app.factory('Auth', ['$http', '$location', '$rootScope',
   function($http, $location, $rootScope) {
     var provider = new firebase.auth.GithubAuthProvider();
     provider.addScope('repo');
+    var user;
+    var token;
 
     var service = {
        login: login,
-       redirect: redirect,
        logout: logout,
-       isLoggedIn: isLoggedIn,
+       login: login,
+       isAuthenticated: isAuthenticated
     };
     return service;
 
-    function login() {
-      return firebase.auth().signInWithRedirect(provider);
+    function login(input) {
+      token = input;
     }
-    function redirect() {
-      return firebase.auth().getRedirectResult().then(function(result) {
-        var token = result.credential.accessToken;
-        $http({
-            method: 'GET',
-            url: 'https://api.github.com/user/teams',
-            headers: {'Authorization': 'token ' + token}
-        }).then(function successCallback(response) {
-            console.log('Successful');
-            console.log(response);
-        }, function errorCallback(response) {
-            console.log(response);
-        });
-      }).catch(function(error) {
-          console.log(error);
-      });
-    }
+
     function logout() {
+      user = null;
       return firebase.auth().signOut().then(function() {
         console.log('Sign out successful');
       }).catch(function(error) {
         console.log(error);
       });
     }
-    function isLoggedIn() {
-      return firebase.auth().onAuthStateChanged(function(user) {
-       if (user) {
-         console.log('Logged In');
-         return true;
-       } else {
-         console.log('Not logged In');
-         return false;
-       }
+    function isAuthenticated() {
+      return $http({
+          method: 'GET',
+          url: 'https://api.github.com/user/teams',
+          headers: {'Authorization': 'token ' + token}
+      }).then(function successCallback(response) {
+          var teams = response.data;
+          for (var key in teams) {
+           if (teams.hasOwnProperty(key)){
+             var name = teams[key].name;
+             var org = teams[key].organization.login;
+
+             if (name == auth_team && org == auth_org){
+               console.log('Authenticated');
+               return true;
+             }
+           }
+          }
+          return false;
+      }, function errorCallback(response) {
+          console.log(response);
       });
     }
 }]);
