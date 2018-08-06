@@ -22,10 +22,12 @@ app.controller('MainController', ['$scope','$http','$location', '$sessionStorage
 
     // Manually set status dropdown
     $scope.stateValues = [
-      {"id":2, "status": "Finished"},
-      {"id":3, "status": "Failed"},
-      {"id":1, "status": "Pending"},
-      {"id":4, "status": "Abandoned"},
+      {"id":1, "status": "No Status"},
+      {"id":2, "status": "Abandoned"},
+      {"id":3, "status": "Finished"},
+      {"id":4, "status": "Pending"},
+      {"id":5, "status": "Running"},
+      {"id":6, "status": "Failed"}
     ];
 
     // Set default values for storage
@@ -160,6 +162,8 @@ app.controller('MainController', ['$scope','$http','$location', '$sessionStorage
           '&sort_method='+ sortMethodNum + '&limit=' + $scope.numRequested +
           '&offset=' + offset + '&descending=' + sortMethodDescending;
 
+      var mybody = angular.element(document).find('body');
+      mybody.addClass('waiting');
       $http({
            method: 'GET',
            url: url_string,
@@ -172,10 +176,13 @@ app.controller('MainController', ['$scope','$http','$location', '$sessionStorage
           else {
             $scope.$storage.releases = data;
           }
+          console.log($scope.$storage.releases);
            $scope.totalPages = Math.ceil($scope.$storage.releases.length / $scope.numPerPage);
            console.log('request successful');
+           mybody.removeClass('waiting');
        }, function errorCallback(response) {
            console.log(response);
+           mybody.removeClass('waiting');
        });
     };
 
@@ -387,6 +394,8 @@ app.controller('DetailsController', ['$scope', '$location', '$http', 'Auth', 'Re
 
     $scope.release = ReleaseData.getRelease();
 
+    var mybody = angular.element(document).find('body');
+    mybody.addClass('waiting');
     // Request task details
     $http({
          method: 'GET',
@@ -394,9 +403,40 @@ app.controller('DetailsController', ['$scope', '$location', '$http', 'Auth', 'Re
          cache: true
      }).then(function successCallback(response) {
           $scope.tasks = transform(response.data);
+          mybody.removeClass('waiting');
+     }, function errorCallback(response) {
+         console.log(response);
+         mybody.removeClass('waiting');
+     });
+
+     $scope.redirect = function () {
+       $location.path('/dashboard');
+     };
+
+     $scope.getLogs = function (task) {
+       var newRoute = '/' + release_id + '/' + task.task_name + '/logs'
+       $location.path(newRoute);
+     };
+}]);
+
+app.controller('LogsController', ['$scope', '$http', '$routeParams', '$sce',
+  function($scope, $http, $routeParams, $sce){
+
+    var release = $routeParams.release_id;
+    var task = $routeParams.task_name;
+
+    $http({
+         method: 'GET',
+         url: site + '/logs?release_id=' + release + '&task_name=' + task,
+         cache: true
+     }).then(function successCallback(response) {
+         var text = angular.fromJson(response.data);
+         text = '<p align="left">' + text.replace(/\n/gm, '<br>') + '</p>';
+         $scope.html = $sce.trustAsHtml(text);
      }, function errorCallback(response) {
          console.log(response);
      });
+
 }]);
 
 app.controller('LoginController', ['$scope', '$location', '$rootScope', 'Auth',
