@@ -32,7 +32,7 @@ app.controller('MainController', ['$scope','$http','$location', '$sessionStorage
     $scope.stateValues = [
       {"id":1, "status": "No Status"},
       {"id":2, "status": "Abandoned"},
-      {"id":3, "status": "Finished"},
+      {"id":3, "status": "Success"},
       {"id":4, "status": "Pending"},
       {"id":5, "status": "Running"},
       {"id":6, "status": "Failed"}
@@ -100,6 +100,25 @@ app.controller('MainController', ['$scope','$http','$location', '$sessionStorage
           cache: true
       }).then(function successCallback(response) {
           $scope.types = angular.fromJson(response.data);
+      }, function errorCallback(response) {
+          console.log(response);
+      });
+    };
+
+    // Dynamically populate summary bar for task data
+    var getSummary = function () {
+      $http({
+          method: 'GET',
+          url: site + '/overall-status',
+          cache: true
+      }).then(function successCallback(response) {
+          var summary = angular.fromJson(response.data);
+          $scope.success = summary['3'];
+          $scope.failed = summary['6'];
+          $scope.pending = summary['4'] + summary['1'];
+          $scope.running_sum = summary['5'];
+          $scope.total = summary.total / 100;
+
       }, function errorCallback(response) {
           console.log(response);
       });
@@ -177,14 +196,13 @@ app.controller('MainController', ['$scope','$http','$location', '$sessionStorage
            url: url_string,
            cache: false
        }).then(function successCallback(response) {
-          var data = transform(response.data);
-          if (method == 'page') {
-            $scope.$storage.releases = $scope.$storage.releases.concat(data);
-          }
-          else {
-            $scope.$storage.releases = data;
-          }
-          console.log($scope.$storage.releases);
+           var data = transform(response.data);
+           if (method == 'page') {
+             $scope.$storage.releases = $scope.$storage.releases.concat(data);
+           }
+           else {
+             $scope.$storage.releases = data;
+           }
            $scope.totalPages = Math.ceil($scope.$storage.releases.length / $scope.numPerPage);
            console.log('request successful');
            mybody.removeClass('waiting');
@@ -199,6 +217,7 @@ app.controller('MainController', ['$scope','$http','$location', '$sessionStorage
       getReleases('onload');
       getTypes();
       getBranches();
+      getSummary();
       setScope();
     };
     $scope.reload();
