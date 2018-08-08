@@ -2,27 +2,23 @@
 
 /* Controllers */
 
-var site = window.location.origin;
-var refresh_time = 900000;
-
 var app = angular.module('ReleaseUI.controllers', ['ngStorage', 'ReleaseUI.filters'])
+                 .constant('site', window.location.origin)
+                 .constant('refresh_time', 900000)
 
 
-app.controller('MainController', ['$scope','$http','$location', '$sessionStorage', '$interval', 'Auth', 'ReleaseData',
-  function($scope, $http, $location, $sessionStorage, $interval, Auth, ReleaseData) {
+app.controller('MainController', ['$scope','$http','$location', '$sessionStorage', '$interval', 'Auth', 'ReleaseData', 'site', 'refresh_time',
+  function($scope, $http, $location, $sessionStorage, $interval, Auth, ReleaseData, site, refresh_time) {
 
     // Authentication
     $scope.auth = Auth.isAuthenticated();
     $scope.user = Auth.getUser();
     $scope.logout = function () {
-      firebase.auth().signOut().then(function() {
-        console.log('Sign out successful');
-        Auth.logout();
+      Auth.logout().then(() => {
         $location.path('/login');
-      }).catch(function(error) {
-        console.log(error);
       });
     };
+
 
     // Set static variables
     $scope.numPerPage = 10;
@@ -348,8 +344,16 @@ app.controller('MainController', ['$scope','$http','$location', '$sessionStorage
     };
 }]);
 
-app.controller('FormController', ['$scope', '$location', '$http', '$compile',
-  function ($scope, $location, $http, $compile) {
+app.controller('FormController', ['$scope', '$location', '$http', '$compile', 'Auth',
+  function ($scope, $location, $http, $compile, Auth) {
+
+    // Authentication
+    $scope.user = Auth.getUser();
+    $scope.logout = function () {
+      Auth.logout().then(() => {
+        $location.path('/login');
+      });
+    };
 
     $scope.release = {};
     $scope.inputs = 1;
@@ -394,8 +398,18 @@ app.controller('FormController', ['$scope', '$location', '$http', '$compile',
     };
 }]);
 
-app.controller('DetailsController', ['$scope', '$location', '$http', 'Auth', 'ReleaseData',
-  function ($scope, $location, $http, Auth, ReleaseData) {
+app.controller('DetailsController', ['$scope', '$location', '$http', 'Auth', 'ReleaseData', 'site',
+  function ($scope, $location, $http, Auth, ReleaseData, site) {
+
+    // Authentication
+    $scope.auth = Auth.isAuthenticated();
+    $scope.user = Auth.getUser();
+    $scope.logout = function () {
+      Auth.logout().then(() => {
+        $location.path('/login');
+      });
+    };
+
 
     $scope.createRelease = function () {
       $location.path('/create-release');
@@ -433,8 +447,8 @@ app.controller('DetailsController', ['$scope', '$location', '$http', 'Auth', 'Re
      };
 }]);
 
-app.controller('LogsController', ['$scope', '$http', '$routeParams', '$sce',
-  function($scope, $http, $routeParams, $sce){
+app.controller('LogsController', ['$scope', '$http', '$routeParams', '$sce', 'site',
+  function($scope, $http, $routeParams, $sce, site){
 
     var release = $routeParams.release_id;
     var task = $routeParams.task_name;
@@ -453,26 +467,28 @@ app.controller('LogsController', ['$scope', '$http', '$routeParams', '$sce',
 
 }]);
 
-app.controller('LoginController', ['$scope', '$location', '$rootScope', 'Auth',
-  function($scope, $location, $rootScope, Auth){
+app.controller('LoginController', ['$scope', '$location', 'Auth',
+  function($scope, $location, Auth){
     var provider = new firebase.auth.GithubAuthProvider();
     provider.addScope('repo');
 
     $scope.login = function() {
+      localStorage.setItem('loggingIn', true);
       firebase.auth().signInWithRedirect(provider);
     };
 
     firebase.auth().getRedirectResult().then(function(result) {
-      console.log('Logged In');
-      var token = result.credential.accessToken;
-      var user = result.user.displayName;
-      var credential = result.credential;
-      Auth.login(token, user, credential);
-      $location.path('/dashboard')
+      if (result.user) {
+        console.log('Logged In');
+        var token = result.credential.accessToken;
+        var user = result.user.displayName;
+        var credential = result.credential;
+        Auth.login(token, user, credential);
+        $location.path('/dashboard');
+      }
     }).catch(function(error) {
       console.log(error);
     });
-
 }]);
 
 var transform =
